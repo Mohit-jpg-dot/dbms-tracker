@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DBMS Learning Tracker</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f4f4f4;
+    color: #333;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  h1, h2 {
+    text-align: center;
+  }
+  .progress-container {
+    width: 100%;
+    background: #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 15px;
+  }
+  .progress-bar {
+    height: 20px;
+    background: #4CAF50;
+    width: 0%;
+    text-align: center;
+    color: white;
+    font-size: 12px;
+    transition: width 0.3s;
+  }
+  ul {
+    list-style: none;
+    padding: 0;
+  }
+  li {
+    background: #fff;
+    margin: 8px 0;
+    padding: 10px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+  label {
+    margin-left: 10px;
+    flex: 1;
+  }
+  /* Target form styles */
+  .target-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+    justify-content: center;
+  }
+  .target-form input, .target-form button {
+    padding: 8px;
+    font-size: 14px;
+  }
+  .target-list li.overdue {
+    background: #ffe5e5; /* light red */
+  }
+  .target-text {
+    flex: 1;
+    margin-left: 10px;
+  }
+  .btn-small {
+    padding: 4px 8px;
+    font-size: 12px;
+    margin-left: 5px;
+  }
+</style>
+</head>
+<body>
+  <h1>📚 DBMS Learning Tracker</h1>
+
+  <!-- Progress Bar for Topics -->
+  <div class="progress-container">
+    <div class="progress-bar" id="progressBar">0%</div>
+  </div>
+
+  <!-- Daily Target Section -->
+  <h2>🎯 Daily Study Targets</h2>
+  <form class="target-form" id="targetForm">
+    <input type="date" id="targetDate" required>
+    <input type="text" id="targetText" placeholder="What’s today’s target?" required>
+    <button type="submit">Add Target</button>
+  </form>
+
+  <!-- Target Progress Bar -->
+  <div class="progress-container">
+    <div class="progress-bar" id="targetProgressBar">0%</div>
+  </div>
+
+  <ul id="targetList" class="target-list"></ul>
+
+  <!-- Topics List -->
+  <h2>✅ Topics Checklist</h2>
+  <ul id="topicList"></ul>
+
+<script>
+// ---------------- Topics Checklist ----------------
+const topics = [
+  "Overview of Database & DBMS",
+  "DBMS Architecture & Data Independence",
+  "Integrity Constraints",
+  "Data Models",
+  "ER Diagram (Entities, Attributes, Relationships)",
+  "Relational Constraints & Referential Integrity",
+  "Conversion of ER to Relational Model",
+  "Relational Algebra – Operations",
+  "Relational Calculus – Tuple",
+  "Relational Calculus – Domain",
+  "Functional Dependencies & Inference Rules",
+  "Closure of Attributes & FD Equivalence",
+  "Functional Decomposition – Lossless vs Lossy",
+  "Normalization – 1NF, 2NF, 3NF, BCNF",
+  "SQL DDL Statements (Create, Alter, Drop)",
+  "SQL DML Statements (Insert, Update, Delete)",
+  "WHERE Clause & Multiple Conditions",
+  "DCL (Grant, Revoke)",
+  "Join Queries & Subqueries (IN, EXISTS, NOT EXISTS)",
+  "Database Security – Threats & SQL Injection"
+];
+
+const topicList = document.getElementById('topicList');
+const progressBar = document.getElementById('progressBar');
+
+// Load saved progress
+let savedTopics = JSON.parse(localStorage.getItem('dbmsProgress') || '{}');
+
+topics.forEach((topic, index) => {
+  const li = document.createElement('li');
+  const checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.id = 'topic' + index;
+  checkbox.checked = savedTopics[topic] || false;
+  checkbox.addEventListener('change', updateProgress);
+
+  const label = document.createElement('label');
+  label.setAttribute('for', 'topic' + index);
+  label.textContent = topic;
+
+  li.appendChild(checkbox);
+  li.appendChild(label);
+  topicList.appendChild(li);
+});
+
+updateProgress();
+
+function updateProgress() {
+  let completed = 0;
+  topics.forEach((topic, index) => {
+    const checked = document.getElementById('topic' + index).checked;
+    savedTopics[topic] = checked;
+    if (checked) completed++;
+  });
+  localStorage.setItem('dbmsProgress', JSON.stringify(savedTopics));
+  const percent = Math.round((completed / topics.length) * 100);
+  progressBar.style.width = percent + '%';
+  progressBar.textContent = percent + '%';
+}
+
+// ---------------- Daily Targets ----------------
+const targetForm = document.getElementById('targetForm');
+const targetList = document.getElementById('targetList');
+const targetProgressBar = document.getElementById('targetProgressBar');
+
+// Load saved targets
+let savedTargets = JSON.parse(localStorage.getItem('dbmsTargets') || '[]');
+renderTargets();
+
+// Notifications for today's targets
+const today = new Date().toISOString().slice(0,10);
+savedTargets.forEach(target=>{
+  if(target.date === today && !target.done){
+    alert("Reminder: Today's target - " + target.text);
+  }
+});
+
+targetForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const date = document.getElementById('targetDate').value;
+  const text = document.getElementById('targetText').value.trim();
+  if (!date || !text) return;
+  savedTargets.push({ date, text, done: false });
+  localStorage.setItem('dbmsTargets', JSON.stringify(savedTargets));
+  targetForm.reset();
+  renderTargets();
+});
+
+function renderTargets() {
+  targetList.innerHTML = '';
+  savedTargets.forEach((target, idx) => {
+    const li = document.createElement('li');
+
+    // overdue check
+    const nowDate = new Date().toISOString().slice(0,10);
+    if (target.date < nowDate && !target.done) {
+      li.classList.add('overdue');
+    }
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = target.done;
+    checkbox.addEventListener('change', () => {
+      savedTargets[idx].done = checkbox.checked;
+      localStorage.setItem('dbmsTargets', JSON.stringify(savedTargets));
+      renderTargets();
+    });
+
+    const span = document.createElement('span');
+    span.className = 'target-text';
+    span.textContent = `${target.date}: ${target.text}`;
+
+    // Edit button
+    const editBtn = document.createElement('button');
+    editBtn.textContent = '✏️';
+    editBtn.className = 'btn-small';
+    editBtn.addEventListener('click', () => {
+      const newText = prompt("Edit target text:", target.text);
+      if (newText !== null) {
+        const newDate = prompt("Edit target date (YYYY-MM-DD):", target.date);
+        if (newDate !== null) {
+          savedTargets[idx].text = newText;
+          savedTargets[idx].date = newDate;
+          localStorage.setItem('dbmsTargets', JSON.stringify(savedTargets));
+          renderTargets();
+        }
+      }
+    });
+
+    // delete button
+    const delBtn = document.createElement('button');
+    delBtn.textContent = '❌';
+    delBtn.className = 'btn-small';
+    delBtn.addEventListener('click', () => {
+      savedTargets.splice(idx, 1);
+      localStorage.setItem('dbmsTargets', JSON.stringify(savedTargets));
+      renderTargets();
+    });
+
+    li.appendChild(checkbox);
+    li.appendChild(span);
+    li.appendChild(editBtn);
+    li.appendChild(delBtn);
+    targetList.appendChild(li);
+  });
+  updateTargetProgress();
+}
+
+function updateTargetProgress() {
+  const total = savedTargets.length;
+  const done = savedTargets.filter(t=>t.done).length;
+  const percent = total ? Math.round((done/total)*100) : 0;
+  targetProgressBar.style.width = percent + '%';
+  targetProgressBar.textContent = percent + '%';
+}
+</script>
+
+</body>
+</html>
